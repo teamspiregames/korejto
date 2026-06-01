@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kártyajáték - Internet nélküli verzió</title>
+    <style>
+        /* Alap letisztult stílusok külső keretrendszer nélkül */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            color: #333333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Képernyők kezelése */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            box-sizing: border-box;
+            padding: 40px 20px;
+        }
+
+        .screen.active {
+            display: flex !important;
+        }
+
+        /* Gomb stílusa a kért színnel és lekerekítéssel */
+        #start-btn {
+            background-color: #ffeedb;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 20px;
+            padding: 20px 60px;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            margin-bottom: 40px;
+        }
+
+        #start-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Rács elrendezés a kategóriáknak */
+        .grid-container {
+            display: grid;
+            grid-template-cols: repeat(2, 1fr);
+            gap: 24px;
+            width: 100%;
+            max-width: 1000px;
+            margin: auto;
+        }
+        @media (min-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .category-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .image-wrapper {
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .category-card:hover .image-wrapper {
+            transform: translateY(-5px);
+        }
+
+        /* Méretarány megtartása object-contain-nel */
+        .card-img {
+            width: 100%;
+            max-height: 50vh;
+            object-contain: contain;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .category-title {
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* 3D Kártyafordítás */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 350px;
+            height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .flip-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-contain: contain;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            color: #999999;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="welcome-screen" class="screen active">
+        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+            <img src="logo.svg" alt="[Logó: logo.svg]" style="max-width: 300px; height: auto;">
+        </div>
+        <button id="start-btn" onclick="startGame()">KEZDÉS</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <h2 style="color: #bcbcbc; margin-bottom: 30px;">Válassz egy típust!</h2>
+        <div class="grid-container">
+            <div id="type-METEOR" class="category-card" onclick="openCard('meteor')">
+                <div class="image-wrapper"><img src="meteor hatter.png" alt="METEOR" class="card-img"></div>
+                <div class="category-title">METEOR</div>
+            </div>
+            <div id="type-PRIZMA" class="category-card" onclick="openCard('prizma')">
+                <div class="image-wrapper"><img src="prizma hatter.png" alt="PRIZMA" class="card-img"></div>
+                <div class="category-title">PRIZMA</div>
+            </div>
+            <div id="type-KRISTÁLY" class="category-card" onclick="openCard('kristaly')">
+                <div class="image-wrapper"><img src="kristaly hatter.png" alt="KRISTÁLY" class="card-img"></div>
+                <div class="category-title">KRISTÁLY</div>
+            </div>
+            <div id="type-MAGMA" class="category-card" onclick="openCard('magma')">
+                <div class="image-wrapper"><img src="magma hatter.png" alt="MAGMA" class="card-img"></div>
+                <div class="category-title">MAGMA</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="card-flip-screen" class="screen">
+        <div class="subtitle">Visszalépéshez koppints duplán a kártyára!</div>
+        <div class="card-container">
+            <div id="card-inner" class="card-inner" ondblclick="closeCard()">
+                <div class="card-front">
+                    <img id="flip-back-img" src="" alt="Hátlap" class="flip-img">
+                </div>
+                <div class="card-back">
+                    <img id="flip-front-img" src="" alt="Kártya értéke" class="flip-img">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CARD_COUNTS = { 'meteor': 25, 'prizma': 25, 'kristaly': 25, 'magma': 25 };
+        const deck = { 'meteor': [], 'prizma': [], 'kristaly': [], 'magma': [] };
+
+        function initDecks() {
+            for (let type in CARD_COUNTS) {
+                deck[type] = [];
+                for (let i = 1; i <= CARD_COUNTS[type]; i++) {
+                    deck[type].push(i);
+                }
+            }
+        }
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const cardFlipScreen = document.getElementById('card-flip-screen');
+        const cardInner = document.getElementById('card-inner');
+        const flipBackImg = document.getElementById('flip-back-img');
+        const flipFrontImg = document.getElementById('flip-front-img');
+
+        function startGame() {
+            initDecks();
+            welcomeScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+        }
+
+        function openCard(cleanType) {
+            const availableCards = deck[cleanType];
+            if (!availableCards || availableCards.length === 0) return;
+
+            const randomIndex = Math.floor(Math.random() * availableCards.length);
+            const selectedCardNumber = availableCards.splice(randomIndex, 1)[0];
+
+            flipBackImg.src = cleanType + ' hatter.png';
+            flipFrontImg.src = cleanType + ' (' + selectedCardNumber + ').png';
+
+            gameScreen.classList.remove('active');
+            cardFlipScreen.classList.add('active');
+
+            cardInner.classList.remove('is-flipped');
+            setTimeout(function() { cardInner.classList.add('is-flipped'); }, 150);
+
+            checkCategoryDepletion(cleanType);
+        }
+
+        function closeCard() {
+            cardInner.classList.remove('is-flipped');
+            setTimeout(function() {
+                cardFlipScreen.classList.remove('active');
+                gameScreen.classList.add('active');
+            }, 300);
+        }
+
+        function checkCategoryDepletion(cleanType) {
+            if (deck[cleanType].length === 0) {
+                let idName = cleanType.toUpperCase();
+                if(idName === 'KRISTALY') idName = 'KRISTÁLY';
+                const cardElement = document.getElementById('type-' + idName);
+                if (cardElement) {
+                    cardElement.style.visibility = 'hidden';
+                    cardElement.style.pointerEvents = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
